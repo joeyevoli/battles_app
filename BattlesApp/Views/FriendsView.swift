@@ -7,7 +7,8 @@ struct FriendsView: View {
     @State private var challengeTarget: User?
 
     var friends: [User] {
-        dataManager.friends(of: dataManager.currentUser)
+        guard let currentUser = dataManager.currentUser else { return [] }
+        return dataManager.friends(of: currentUser)
     }
 
     var body: some View {

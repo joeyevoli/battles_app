@@ -47,9 +47,10 @@ struct HomeView: View {
     }
 
     private var recordCard: some View {
-        let record = dataManager.record(for: dataManager.currentUser.id)
+        let user = dataManager.currentUser
+        let record = dataManager.record(for: user?.id ?? UUID())
         return VStack(spacing: 16) {
-            Text(dataManager.currentUser.avatarEmoji)
+            Text(user?.avatarEmoji ?? "⚔️")
                 .font(.system(size: 48))
 
             Text("Your Record")
@@ -217,7 +218,7 @@ struct ChallengeRow: View {
         Group {
             switch challenge.status {
             case .completed:
-                if challenge.winnerID == dataManager.currentUser.id {
+                if challenge.winnerID == dataManager.currentUser?.id {
                     Label("Won", systemImage: "trophy.fill")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.green)
@@ -231,7 +232,7 @@ struct ChallengeRow: View {
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.orange)
             case .pending:
-                if challenge.challengedID == dataManager.currentUser.id {
+                if challenge.challengedID == dataManager.currentUser?.id {
                     Label("Respond", systemImage: "bell.fill")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.orange)

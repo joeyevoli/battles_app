@@ -23,6 +23,7 @@
 		A10000014 /* ReportResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000014; };
 		A10000015 /* UserSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000015; };
 		A10000016 /* OtherUserProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000016; };
+		A10000017 /* AuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000017; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -43,6 +44,7 @@
 		A20000014 /* ReportResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportResultView.swift; sourceTree = "<group>"; };
 		A20000015 /* UserSearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserSearchView.swift; sourceTree = "<group>"; };
 		A20000016 /* OtherUserProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OtherUserProfileView.swift; sourceTree = "<group>"; };
+		A20000017 /* AuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -99,6 +101,7 @@
 				A20000014 /* ReportResultView.swift */,
 				A20000015 /* UserSearchView.swift */,
 				A20000016 /* OtherUserProfileView.swift */,
+				A20000017 /* AuthView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -211,6 +214,7 @@
 				A10000014 /* ReportResultView.swift in Sources */,
 				A10000015 /* UserSearchView.swift in Sources */,
 				A10000016 /* OtherUserProfileView.swift in Sources */,
+				A10000017 /* AuthView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

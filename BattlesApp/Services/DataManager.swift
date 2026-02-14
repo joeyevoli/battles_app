@@ -2,7 +2,8 @@ import Foundation
 import SwiftUI
 
 class DataManager: ObservableObject {
-    @Published var currentUser: User
+    @Published var currentUser: User?
+    @Published var isSignedIn: Bool = false
     @Published var allUsers: [User]
     @Published var challenges: [Challenge]
 
@@ -11,16 +12,74 @@ class DataManager: ObservableObject {
     private let currentUserKey = "battles_current_user_id"
 
     init() {
-        // Initialize with defaults first, then load
-        self.currentUser = User(username: "you", displayName: "You", avatarEmoji: "⚔️")
         self.allUsers = []
         self.challenges = []
 
         loadData()
 
+        if let currentIDString = UserDefaults.standard.string(forKey: currentUserKey),
+           let currentID = UUID(uuidString: currentIDString),
+           let user = allUsers.first(where: { $0.id == currentID }) {
+            self.currentUser = user
+            self.isSignedIn = true
+        }
+
         if allUsers.isEmpty {
             seedDemoData()
         }
+    }
+
+    // MARK: - Auth
+
+    func signIn(email: String) -> Bool {
+        let normalizedEmail = email.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let user = allUsers.first(where: { $0.email.lowercased() == normalizedEmail }) else {
+            return false
+        }
+        currentUser = user
+        isSignedIn = true
+        UserDefaults.standard.set(user.id.uuidString, forKey: currentUserKey)
+        return true
+    }
+
+    func createAccount(email: String, username: String, displayName: String) -> Bool {
+        let normalizedEmail = email.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedUsername = username.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Check if email or username already taken
+        if allUsers.contains(where: { $0.email.lowercased() == normalizedEmail }) {
+            return false
+        }
+        if allUsers.contains(where: { $0.username.lowercased() == normalizedUsername }) {
+            return false
+        }
+
+        let newUser = User(
+            email: normalizedEmail,
+            username: normalizedUsername,
+            displayName: displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        )
+        allUsers.append(newUser)
+        currentUser = newUser
+        isSignedIn = true
+        save()
+        return true
+    }
+
+    func signOut() {
+        currentUser = nil
+        isSignedIn = false
+        UserDefaults.standard.removeObject(forKey: currentUserKey)
+    }
+
+    func isEmailTaken(_ email: String) -> Bool {
+        let normalized = email.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        return allUsers.contains(where: { $0.email.lowercased() == normalized })
+    }
+
+    func isUsernameTaken(_ username: String) -> Bool {
+        let normalized = username.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        return allUsers.contains(where: { $0.username.lowercased() == normalized })
     }
 
     // MARK: - Persistence
@@ -35,12 +94,6 @@ class DataManager: ObservableObject {
            let decoded = try? JSONDecoder().decode([Challenge].self, from: challengesData) {
             self.challenges = decoded
         }
-
-        if let currentIDString = UserDefaults.standard.string(forKey: currentUserKey),
-           let currentID = UUID(uuidString: currentIDString),
-           let user = allUsers.first(where: { $0.id == currentID }) {
-            self.currentUser = user
-        }
     }
 
     private func save() {
@@ -50,41 +103,35 @@ class DataManager: ObservableObject {
         if let challengesData = try? JSONEncoder().encode(challenges) {
             UserDefaults.standard.set(challengesData, forKey: challengesKey)
         }
-        UserDefaults.standard.set(currentUser.id.uuidString, forKey: currentUserKey)
+        if let currentUser = currentUser {
+            UserDefaults.standard.set(currentUser.id.uuidString, forKey: currentUserKey)
+        }
     }
 
     // MARK: - Demo Data
 
     private func seedDemoData() {
-        let you = User(username: "you", displayName: "You", avatarEmoji: "⚔️")
-        let alice = User(username: "alice", displayName: "Alice", avatarEmoji: "🏆")
-        let bob = User(username: "bob", displayName: "Bob", avatarEmoji: "🎯")
-        let charlie = User(username: "charlie", displayName: "Charlie", avatarEmoji: "🔥")
-        let dana = User(username: "dana", displayName: "Dana", avatarEmoji: "💪")
-        let evan = User(username: "evan", displayName: "Evan", avatarEmoji: "🎮")
-
-        var mutableYou = you
-        mutableYou.friendIDs = [alice.id, bob.id, charlie.id, dana.id]
+        let alice = User(email: "alice@example.com", username: "alice", displayName: "Alice", avatarEmoji: "🏆")
+        let bob = User(email: "bob@example.com", username: "bob", displayName: "Bob", avatarEmoji: "🎯")
+        let charlie = User(email: "charlie@example.com", username: "charlie", displayName: "Charlie", avatarEmoji: "🔥")
+        let dana = User(email: "dana@example.com", username: "dana", displayName: "Dana", avatarEmoji: "💪")
+        let evan = User(email: "evan@example.com", username: "evan", displayName: "Evan", avatarEmoji: "🎮")
 
         var mutableAlice = alice
-        mutableAlice.friendIDs = [you.id, bob.id]
+        mutableAlice.friendIDs = [bob.id]
 
         var mutableBob = bob
-        mutableBob.friendIDs = [you.id, alice.id, charlie.id]
+        mutableBob.friendIDs = [alice.id, charlie.id]
 
         var mutableCharlie = charlie
-        mutableCharlie.friendIDs = [you.id, bob.id]
+        mutableCharlie.friendIDs = [bob.id]
 
-        var mutableDana = dana
-        mutableDana.friendIDs = [you.id]
+        self.allUsers = [mutableAlice, mutableBob, mutableCharlie, dana, evan]
 
-        self.currentUser = mutableYou
-        self.allUsers = [mutableYou, mutableAlice, mutableBob, mutableCharlie, mutableDana, evan]
-
-        // Seed some challenges in various states
+        // Seed some challenges between demo users
         let c1 = Challenge(
-            challengerID: mutableYou.id,
-            challengedID: alice.id,
+            challengerID: alice.id,
+            challengedID: bob.id,
             title: "1v1 Basketball",
             description: "First to 21 points, win by 2. At the park courts Saturday afternoon.",
             category: "Sports",
@@ -94,13 +141,13 @@ class DataManager: ObservableObject {
             completedDate: Date().addingTimeInterval(-86400 * 5),
             challengerResultClaim: .iWon,
             challengedResultClaim: .theyWon,
-            winnerID: mutableYou.id,
+            winnerID: alice.id,
             isDisputed: false
         )
 
         let c2 = Challenge(
             challengerID: bob.id,
-            challengedID: mutableYou.id,
+            challengedID: charlie.id,
             title: "Chess Match",
             description: "Best of 3 games, 15 minute time control each.",
             category: "Board Games",
@@ -115,40 +162,6 @@ class DataManager: ObservableObject {
         )
 
         let c3 = Challenge(
-            challengerID: charlie.id,
-            challengedID: mutableYou.id,
-            title: "Hot Dog Eating Contest",
-            description: "Most hot dogs in 10 minutes. Loser buys lunch next week.",
-            category: "Food",
-            status: .pending,
-            createdDate: Date().addingTimeInterval(-3600)
-        )
-
-        let c4 = Challenge(
-            challengerID: mutableYou.id,
-            challengedID: dana.id,
-            title: "5K Race",
-            description: "Run the lakefront trail. Best time wins.",
-            category: "Fitness",
-            status: .accepted,
-            createdDate: Date().addingTimeInterval(-86400 * 2),
-            acceptedDate: Date().addingTimeInterval(-86400)
-        )
-
-        let c5 = Challenge(
-            challengerID: mutableYou.id,
-            challengedID: bob.id,
-            title: "Mario Kart Tournament",
-            description: "Best of 5 races on Rainbow Road. No items allowed.",
-            category: "Gaming",
-            status: .awaitingResults,
-            createdDate: Date().addingTimeInterval(-86400 * 3),
-            acceptedDate: Date().addingTimeInterval(-86400 * 2),
-            challengerResultClaim: .iWon,
-            challengedResultClaim: .notReported
-        )
-
-        let c6 = Challenge(
             challengerID: alice.id,
             challengedID: bob.id,
             title: "Karaoke Battle",
@@ -164,7 +177,7 @@ class DataManager: ObservableObject {
             isDisputed: false
         )
 
-        self.challenges = [c1, c2, c3, c4, c5, c6]
+        self.challenges = [c1, c2, c3]
         save()
     }
 
@@ -172,6 +185,13 @@ class DataManager: ObservableObject {
 
     func user(for id: UUID) -> User? {
         allUsers.first(where: { $0.id == id })
+    }
+
+    func findUser(byEmailOrUsername query: String) -> User? {
+        let normalized = query.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        return allUsers.first(where: {
+            $0.email.lowercased() == normalized || $0.username.lowercased() == normalized
+        })
     }
 
     func friends(of user: User) -> [User] {
@@ -219,14 +239,16 @@ class DataManager: ObservableObject {
     // MARK: - Challenge Queries
 
     func challengesForCurrentUser() -> [Challenge] {
-        challenges.filter {
+        guard let currentUser = currentUser else { return [] }
+        return challenges.filter {
             $0.challengerID == currentUser.id || $0.challengedID == currentUser.id
         }
         .sorted { $0.createdDate > $1.createdDate }
     }
 
     func pendingChallengesForCurrentUser() -> [Challenge] {
-        challengesForCurrentUser().filter {
+        guard let currentUser = currentUser else { return [] }
+        return challengesForCurrentUser().filter {
             $0.status == .pending && $0.challengedID == currentUser.id
         }
     }
@@ -254,6 +276,7 @@ class DataManager: ObservableObject {
     // MARK: - Challenge Actions
 
     func createChallenge(challengedID: UUID, title: String, description: String, category: String) {
+        guard let currentUser = currentUser else { return }
         let challenge = Challenge(
             challengerID: currentUser.id,
             challengedID: challengedID,
@@ -285,6 +308,7 @@ class DataManager: ObservableObject {
     }
 
     func reportResult(challengeID: UUID, claim: ResultClaim) {
+        guard let currentUser = currentUser else { return }
         guard let index = challenges.firstIndex(where: { $0.id == challengeID }) else { return }
 
         let isChallenger = challenges[index].challengerID == currentUser.id
@@ -319,8 +343,10 @@ class DataManager: ObservableObject {
     // MARK: - Friend Actions
 
     func addFriend(_ friendID: UUID) {
+        guard var currentUser = currentUser else { return }
         guard !currentUser.friendIDs.contains(friendID) else { return }
         currentUser.friendIDs.append(friendID)
+        self.currentUser = currentUser
 
         if let index = allUsers.firstIndex(where: { $0.id == currentUser.id }) {
             allUsers[index] = currentUser
@@ -337,7 +363,9 @@ class DataManager: ObservableObject {
     }
 
     func removeFriend(_ friendID: UUID) {
+        guard var currentUser = currentUser else { return }
         currentUser.friendIDs.removeAll { $0 == friendID }
+        self.currentUser = currentUser
 
         if let index = allUsers.firstIndex(where: { $0.id == currentUser.id }) {
             allUsers[index] = currentUser
@@ -351,6 +379,7 @@ class DataManager: ObservableObject {
     }
 
     func opponent(in challenge: Challenge) -> User? {
+        guard let currentUser = currentUser else { return nil }
         let opponentID = challenge.challengerID == currentUser.id
             ? challenge.challengedID
             : challenge.challengerID

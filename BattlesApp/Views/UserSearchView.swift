@@ -6,13 +6,15 @@ struct UserSearchView: View {
     @State private var searchText = ""
 
     var availableUsers: [User] {
-        let nonFriends = dataManager.nonFriends(of: dataManager.currentUser)
+        guard let currentUser = dataManager.currentUser else { return [] }
+        let nonFriends = dataManager.nonFriends(of: currentUser)
         if searchText.isEmpty {
             return nonFriends
         }
         return nonFriends.filter {
             $0.displayName.localizedCaseInsensitiveContains(searchText) ||
-            $0.username.localizedCaseInsensitiveContains(searchText)
+            $0.username.localizedCaseInsensitiveContains(searchText) ||
+            $0.email.localizedCaseInsensitiveContains(searchText)
         }
     }
 
@@ -36,6 +38,9 @@ struct UserSearchView: View {
                                 Text("@\(user.username)")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
+                                Text(user.email)
+                                    .font(.caption2)
+                                    .foregroundStyle(.tertiary)
                             }
 
                             Spacer()
@@ -43,7 +48,7 @@ struct UserSearchView: View {
                             Button {
                                 dataManager.addFriend(user.id)
                             } label: {
-                                if dataManager.currentUser.friendIDs.contains(user.id) {
+                                if dataManager.currentUser?.friendIDs ?? [].contains(user.id) {
                                     Label("Added", systemImage: "checkmark")
                                         .font(.caption.weight(.semibold))
                                         .foregroundStyle(.green)
@@ -63,7 +68,7 @@ struct UserSearchView: View {
                     }
                 }
             }
-            .searchable(text: $searchText, prompt: "Search by name or username...")
+            .searchable(text: $searchText, prompt: "Search by name, username, or email...")
             .navigationTitle("Find Friends")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

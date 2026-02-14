@@ -7,39 +7,95 @@ struct CreateChallengeView: View {
     @State private var title = ""
     @State private var description = ""
     @State private var selectedCategory: ChallengeCategory = ChallengeCategory.allCategories[0]
-    @State private var selectedFriend: User?
+    @State private var selectedOpponent: User?
     @State private var showFriendPicker = false
+    @State private var opponentSearchText = ""
+    @State private var lookupErrorMessage = ""
+    @State private var showLookupError = false
 
     var body: some View {
         NavigationStack {
             Form {
                 // Opponent Section
                 Section {
-                    if let friend = selectedFriend {
+                    if let opponent = selectedOpponent {
                         HStack {
-                            Text(friend.avatarEmoji)
+                            Text(opponent.avatarEmoji)
                                 .font(.title2)
                             VStack(alignment: .leading) {
-                                Text(friend.displayName)
+                                Text(opponent.displayName)
                                     .font(.subheadline.weight(.semibold))
-                                Text("@\(friend.username)")
+                                Text("@\(opponent.username)")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
+                                Text(opponent.email)
+                                    .font(.caption2)
+                                    .foregroundStyle(.tertiary)
                             }
                             Spacer()
                             Button("Change") {
-                                showFriendPicker = true
+                                selectedOpponent = nil
+                                opponentSearchText = ""
+                                lookupErrorMessage = ""
+                                showLookupError = false
                             }
                             .font(.subheadline)
                         }
                     } else {
+                        // Email / username lookup
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack {
+                                Image(systemName: "magnifyingglass")
+                                    .foregroundStyle(.secondary)
+                                TextField("Enter email or username", text: $opponentSearchText)
+                                    .textContentType(.emailAddress)
+                                    .keyboardType(.emailAddress)
+                                    .autocapitalization(.none)
+                                    .disableAutocorrection(true)
+
+                                Button {
+                                    lookupOpponent()
+                                } label: {
+                                    Text("Find")
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(.white)
+                                        .padding(.horizontal, 14)
+                                        .padding(.vertical, 6)
+                                        .background(opponentSearchText.isEmpty ? Color.gray : Color.orange)
+                                        .clipShape(Capsule())
+                                }
+                                .disabled(opponentSearchText.isEmpty)
+                            }
+
+                            if showLookupError {
+                                Text(lookupErrorMessage)
+                                    .font(.caption)
+                                    .foregroundStyle(.red)
+                            }
+                        }
+
+                        // Divider with "or"
+                        HStack {
+                            Rectangle()
+                                .fill(Color(.separator))
+                                .frame(height: 1)
+                            Text("or")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Rectangle()
+                                .fill(Color(.separator))
+                                .frame(height: 1)
+                        }
+                        .padding(.vertical, 4)
+
+                        // Pick from friends
                         Button {
                             showFriendPicker = true
                         } label: {
                             HStack {
-                                Image(systemName: "person.badge.plus")
+                                Image(systemName: "person.2.fill")
                                     .foregroundStyle(.blue)
-                                Text("Choose Opponent")
+                                Text("Choose from Friends")
                                     .foregroundStyle(.primary)
                                 Spacer()
                                 Image(systemName: "chevron.right")
@@ -49,6 +105,10 @@ struct CreateChallengeView: View {
                     }
                 } header: {
                     Text("Challenge Who?")
+                } footer: {
+                    if selectedOpponent == nil {
+                        Text("Enter their email address or username to find them, or pick from your friends list.")
+                    }
                 }
 
                 // Category Section
@@ -83,7 +143,7 @@ struct CreateChallengeView: View {
                 }
 
                 // Preview Section
-                if selectedFriend != nil && !title.isEmpty {
+                if selectedOpponent != nil && !title.isEmpty {
                     Section {
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
@@ -98,13 +158,13 @@ struct CreateChallengeView: View {
                                     .foregroundStyle(.secondary)
                             }
                             HStack {
-                                Text("You")
+                                Text(dataManager.currentUser?.displayName ?? "You")
                                 Image(systemName: "bolt.fill")
                                     .foregroundStyle(.orange)
                                 Text("vs")
                                 Image(systemName: "bolt.fill")
                                     .foregroundStyle(.orange)
-                                Text(selectedFriend?.displayName ?? "")
+                                Text(selectedOpponent?.displayName ?? "")
                             }
                             .font(.subheadline.weight(.semibold))
                         }
@@ -126,20 +186,40 @@ struct CreateChallengeView: View {
                     Button("Send") {
                         sendChallenge()
                     }
-                    .disabled(selectedFriend == nil || title.isEmpty)
+                    .disabled(selectedOpponent == nil || title.isEmpty)
                     .fontWeight(.semibold)
                 }
             }
             .sheet(isPresented: $showFriendPicker) {
-                FriendPickerView(selectedFriend: $selectedFriend)
+                FriendPickerView(selectedFriend: $selectedOpponent)
             }
         }
     }
 
+    private func lookupOpponent() {
+        showLookupError = false
+        let query = opponentSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !query.isEmpty else { return }
+
+        if let found = dataManager.findUser(byEmailOrUsername: query) {
+            if found.id == dataManager.currentUser?.id {
+                lookupErrorMessage = "You can't challenge yourself!"
+                showLookupError = true
+            } else {
+                selectedOpponent = found
+                showLookupError = false
+            }
+        } else {
+            lookupErrorMessage = "No user found with \"\(query)\". They need a Battles account first."
+            showLookupError = true
+        }
+    }
+
     private func sendChallenge() {
-        guard let friend = selectedFriend else { return }
+        guard let opponent = selectedOpponent else { return }
         dataManager.createChallenge(
-            challengedID: friend.id,
+            challengedID: opponent.id,
             title: title,
             description: description,
             category: selectedCategory.name
@@ -177,13 +257,15 @@ struct FriendPickerView: View {
     @State private var searchText = ""
 
     var filteredFriends: [User] {
-        let friends = dataManager.friends(of: dataManager.currentUser)
+        guard let currentUser = dataManager.currentUser else { return [] }
+        let friends = dataManager.friends(of: currentUser)
         if searchText.isEmpty {
             return friends
         }
         return friends.filter {
             $0.displayName.localizedCaseInsensitiveContains(searchText) ||
-            $0.username.localizedCaseInsensitiveContains(searchText)
+            $0.username.localizedCaseInsensitiveContains(searchText) ||
+            $0.email.localizedCaseInsensitiveContains(searchText)
         }
     }
 

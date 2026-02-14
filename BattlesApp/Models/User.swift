@@ -2,6 +2,7 @@ import Foundation
 
 struct User: Identifiable, Codable, Hashable {
     let id: UUID
+    var email: String
     var username: String
     var displayName: String
     var avatarEmoji: String
@@ -10,6 +11,7 @@ struct User: Identifiable, Codable, Hashable {
 
     init(
         id: UUID = UUID(),
+        email: String,
         username: String,
         displayName: String,
         avatarEmoji: String = "⚔️",
@@ -17,6 +19,7 @@ struct User: Identifiable, Codable, Hashable {
         joinDate: Date = Date()
     ) {
         self.id = id
+        self.email = email
         self.username = username
         self.displayName = displayName
         self.avatarEmoji = avatarEmoji

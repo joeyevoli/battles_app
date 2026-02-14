@@ -6,8 +6,13 @@ struct BattlesAppApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .environmentObject(dataManager)
+            if dataManager.isSignedIn {
+                ContentView()
+                    .environmentObject(dataManager)
+            } else {
+                AuthView()
+                    .environmentObject(dataManager)
+            }
         }
     }
 }

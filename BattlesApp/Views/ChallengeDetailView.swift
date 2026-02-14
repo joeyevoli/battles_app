@@ -14,11 +14,11 @@ struct ChallengeDetailView: View {
     }
 
     private var isChallenger: Bool {
-        challenge.challengerID == dataManager.currentUser.id
+        challenge.challengerID == dataManager.currentUser?.id
     }
 
     private var isChallenged: Bool {
-        challenge.challengedID == dataManager.currentUser.id
+        challenge.challengedID == dataManager.currentUser?.id
     }
 
     private var currentUserClaim: ResultClaim {
@@ -335,7 +335,7 @@ struct ChallengeDetailView: View {
         case .awaitingResults:
             return "Awaiting Results"
         case .completed:
-            if challenge.winnerID == dataManager.currentUser.id {
+            if challenge.winnerID == dataManager.currentUser?.id {
                 return "You Won!"
             } else {
                 return "You Lost"

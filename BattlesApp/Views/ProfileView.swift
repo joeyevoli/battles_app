@@ -4,7 +4,7 @@ struct ProfileView: View {
     @EnvironmentObject var dataManager: DataManager
 
     private var record: UserRecord {
-        dataManager.record(for: dataManager.currentUser.id)
+        dataManager.record(for: dataManager.currentUser?.id ?? UUID())
     }
 
     private var completedChallenges: [Challenge] {
@@ -26,6 +26,9 @@ struct ProfileView: View {
 
                     // Head-to-Head Records
                     headToHeadSection
+
+                    // Sign Out
+                    signOutSection
                 }
                 .padding()
             }
@@ -34,19 +37,42 @@ struct ProfileView: View {
         }
     }
 
-    private var profileHeader: some View {
+    private var signOutSection: some View {
         VStack(spacing: 12) {
-            Text(dataManager.currentUser.avatarEmoji)
+            Divider()
+                .padding(.vertical, 8)
+
+            Button(role: .destructive) {
+                dataManager.signOut()
+            } label: {
+                Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color(.systemGray6))
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .fontWeight(.medium)
+            }
+        }
+    }
+
+    private var profileHeader: some View {
+        let user = dataManager.currentUser
+        return VStack(spacing: 12) {
+            Text(user?.avatarEmoji ?? "⚔️")
                 .font(.system(size: 64))
 
-            Text(dataManager.currentUser.displayName)
+            Text(user?.displayName ?? "")
                 .font(.title.weight(.bold))
 
-            Text("@\(dataManager.currentUser.username)")
+            Text("@\(user?.username ?? "")")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
-            Text("Joined \(dataManager.currentUser.joinDate.formatted(.dateTime.month().year()))")
+            Text(user?.email ?? "")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Text("Joined \(user?.joinDate.formatted(.dateTime.month().year()) ?? "")")
                 .font(.caption)
                 .foregroundStyle(.tertiary)
         }
@@ -130,7 +156,7 @@ struct ProfileView: View {
             Text("Head-to-Head")
                 .font(.headline)
 
-            let friends = dataManager.friends(of: dataManager.currentUser)
+            let friends = dataManager.currentUser.map { dataManager.friends(of: $0) } ?? []
             if friends.isEmpty {
                 Text("Add friends to see head-to-head records.")
                     .font(.subheadline)
@@ -150,7 +176,8 @@ struct ProfileView: View {
     }
 
     private func headToHead(against opponentID: UUID) -> (wins: Int, losses: Int, disputed: Int, total: Int) {
-        let matches = dataManager.challenges(between: dataManager.currentUser.id, and: opponentID)
+        guard let currentUserID = dataManager.currentUser?.id else { return (0, 0, 0, 0) }
+        let matches = dataManager.challenges(between: currentUserID, and: opponentID)
             .filter { $0.status == .completed || $0.status == .disputed }
 
         var wins = 0
@@ -160,7 +187,7 @@ struct ProfileView: View {
         for match in matches {
             if match.isDisputed {
                 disputed += 1
-            } else if match.winnerID == dataManager.currentUser.id {
+            } else if match.winnerID == currentUserID {
                 wins += 1
             } else if match.winnerID != nil {
                 losses += 1
@@ -208,7 +235,7 @@ struct HistoryRow: View {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundStyle(.orange)
                     .frame(width: 32)
-            } else if challenge.winnerID == dataManager.currentUser.id {
+            } else if challenge.winnerID != nil && challenge.winnerID == dataManager.currentUser?.id {
                 Image(systemName: "trophy.fill")
                     .foregroundStyle(.green)
                     .frame(width: 32)

@@ -10,7 +10,8 @@ struct OtherUserProfileView: View {
     }
 
     private var headToHead: (wins: Int, losses: Int, disputed: Int) {
-        let matches = dataManager.challenges(between: dataManager.currentUser.id, and: user.id)
+        guard let currentUserID = dataManager.currentUser?.id else { return (0, 0, 0) }
+        let matches = dataManager.challenges(between: currentUserID, and: user.id)
             .filter { $0.status == .completed || $0.status == .disputed }
 
         var wins = 0
@@ -20,7 +21,7 @@ struct OtherUserProfileView: View {
         for match in matches {
             if match.isDisputed {
                 disputed += 1
-            } else if match.winnerID == dataManager.currentUser.id {
+            } else if match.winnerID == currentUserID {
                 wins += 1
             } else if match.winnerID != nil {
                 losses += 1
@@ -31,7 +32,8 @@ struct OtherUserProfileView: View {
     }
 
     private var sharedHistory: [Challenge] {
-        dataManager.challenges(between: dataManager.currentUser.id, and: user.id)
+        guard let currentUserID = dataManager.currentUser?.id else { return [] }
+        return dataManager.challenges(between: currentUserID, and: user.id)
     }
 
     var body: some View {
@@ -47,6 +49,10 @@ struct OtherUserProfileView: View {
 
                     Text("@\(user.username)")
                         .font(.subheadline)
+                        .foregroundStyle(.secondary)
+
+                    Text(user.email)
+                        .font(.caption)
                         .foregroundStyle(.secondary)
 
                     // Their overall record
@@ -139,7 +145,7 @@ struct OtherUserProfileView: View {
                 }
 
                 // Friend management
-                if dataManager.currentUser.friendIDs.contains(user.id) {
+                if dataManager.currentUser?.friendIDs ?? [].contains(user.id) {
                     Button(role: .destructive) {
                         dataManager.removeFriend(user.id)
                     } label: {
