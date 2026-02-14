@@ -145,7 +145,7 @@ struct OtherUserProfileView: View {
                 }
 
                 // Friend management
-                if dataManager.currentUser?.friendIDs ?? [].contains(user.id) {
+                if (dataManager.currentUser?.friendIDs ?? []).contains(user.id) {
                     Button(role: .destructive) {
                         dataManager.removeFriend(user.id)
                     } label: {

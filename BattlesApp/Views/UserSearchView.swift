@@ -48,7 +48,7 @@ struct UserSearchView: View {
                             Button {
                                 dataManager.addFriend(user.id)
                             } label: {
-                                if dataManager.currentUser?.friendIDs ?? [].contains(user.id) {
+                                if (dataManager.currentUser?.friendIDs ?? []).contains(user.id) {
                                     Label("Added", systemImage: "checkmark")
                                         .font(.caption.weight(.semibold))
                                         .foregroundStyle(.green)
