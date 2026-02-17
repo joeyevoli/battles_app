@@ -6,6 +6,7 @@ class DataManager: ObservableObject {
     @Published var isSignedIn: Bool = false
     @Published var allUsers: [User]
     @Published var challenges: [Challenge]
+    @Published var pendingChallengeCountOnSignup: Int = 0
 
     private let usersKey = "battles_users"
     private let challengesKey = "battles_challenges"
@@ -60,6 +61,13 @@ class DataManager: ObservableObject {
             displayName: displayName.trimmingCharacters(in: .whitespacesAndNewlines)
         )
         allUsers.append(newUser)
+
+        // Link any pending invited challenges to this new account
+        let linkedCount = linkPendingChallenges(for: newUser)
+        if linkedCount > 0 {
+            pendingChallengeCountOnSignup = linkedCount
+        }
+
         currentUser = newUser
         isSignedIn = true
         save()
@@ -286,6 +294,44 @@ class DataManager: ObservableObject {
         )
         challenges.append(challenge)
         save()
+    }
+
+    func createChallengeByEmail(challengedEmail: String, title: String, description: String, category: String) {
+        guard let currentUser = currentUser else { return }
+        let normalizedEmail = challengedEmail.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        let placeholderID = UUID()
+        let challenge = Challenge(
+            challengerID: currentUser.id,
+            challengedID: placeholderID,
+            challengedEmail: normalizedEmail,
+            title: title,
+            description: description,
+            category: category
+        )
+        challenges.append(challenge)
+        save()
+        sendInvitationEmail(to: normalizedEmail, challengerName: currentUser.displayName, challengeTitle: title)
+    }
+
+    @discardableResult
+    private func linkPendingChallenges(for user: User) -> Int {
+        let normalizedEmail = user.email.lowercased()
+        var count = 0
+        for index in challenges.indices {
+            if let email = challenges[index].challengedEmail,
+               email.lowercased() == normalizedEmail,
+               challenges[index].status == .pending {
+                challenges[index].challengedID = user.id
+                count += 1
+            }
+        }
+        return count
+    }
+
+    private func sendInvitationEmail(to email: String, challengerName: String, challengeTitle: String) {
+        // In a production app, this would call a backend API to send a real email.
+        // For now, we log the simulated email send.
+        print("[Battles] Invitation email sent to \(email): \(challengerName) challenged you to \"\(challengeTitle)\"! Create an account to accept.")
     }
 
     func acceptChallenge(_ challengeID: UUID) {

@@ -13,6 +13,10 @@ struct ChallengeDetailView: View {
         dataManager.user(for: challenge.challengedID)
     }
 
+    private var isInvitedChallenge: Bool {
+        challenge.challengedEmail != nil && challenged == nil
+    }
+
     private var isChallenger: Bool {
         challenge.challengerID == dataManager.currentUser?.id
     }
@@ -99,14 +103,27 @@ struct ChallengeDetailView: View {
                 }
 
                 VStack {
-                    Text(challenged?.avatarEmoji ?? "?")
-                        .font(.system(size: 40))
-                    Text(challenged?.displayName ?? "Unknown")
-                        .font(.caption.weight(.semibold))
-                    if isChallenged {
-                        Text("(You)")
+                    if isInvitedChallenge {
+                        Image(systemName: "envelope.fill")
+                            .font(.system(size: 32))
+                            .foregroundStyle(.blue)
+                        Text(challenge.challengedEmail ?? "Invited")
+                            .font(.caption.weight(.semibold))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                        Text("(Invited)")
                             .font(.caption2)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.blue)
+                    } else {
+                        Text(challenged?.avatarEmoji ?? "?")
+                            .font(.system(size: 40))
+                        Text(challenged?.displayName ?? "Unknown")
+                            .font(.caption.weight(.semibold))
+                        if isChallenged {
+                            Text("(You)")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
             }
@@ -299,6 +316,9 @@ struct ChallengeDetailView: View {
     }
 
     private var statusIcon: String {
+        if isInvitedChallenge && challenge.status == .pending {
+            return "envelope.fill"
+        }
         switch challenge.status {
         case .pending: return "hourglass"
         case .accepted: return "handshake.fill"
@@ -311,6 +331,9 @@ struct ChallengeDetailView: View {
     }
 
     private var statusColor: Color {
+        if isInvitedChallenge && challenge.status == .pending {
+            return .blue
+        }
         switch challenge.status {
         case .pending: return .orange
         case .accepted: return .blue
@@ -323,6 +346,9 @@ struct ChallengeDetailView: View {
     }
 
     private var statusTitle: String {
+        if isInvitedChallenge && challenge.status == .pending {
+            return "Invitation Sent"
+        }
         switch challenge.status {
         case .pending:
             return isChallenged ? "You've Been Challenged!" : "Challenge Sent"
@@ -346,6 +372,9 @@ struct ChallengeDetailView: View {
     }
 
     private var statusSubtitle: String {
+        if isInvitedChallenge && challenge.status == .pending {
+            return "Waiting for \(challenge.challengedEmail ?? "them") to create an account"
+        }
         switch challenge.status {
         case .pending:
             return isChallenged ? "Accept or decline this challenge" : "Waiting for response..."

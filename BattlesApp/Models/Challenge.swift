@@ -31,7 +31,8 @@ enum ResultClaim: String, Codable {
 struct Challenge: Identifiable, Codable {
     let id: UUID
     let challengerID: UUID
-    let challengedID: UUID
+    var challengedID: UUID
+    var challengedEmail: String?
     var title: String
     var description: String
     var category: String
@@ -50,6 +51,7 @@ struct Challenge: Identifiable, Codable {
         id: UUID = UUID(),
         challengerID: UUID,
         challengedID: UUID,
+        challengedEmail: String? = nil,
         title: String,
         description: String,
         category: String = "General",
@@ -65,6 +67,7 @@ struct Challenge: Identifiable, Codable {
         self.id = id
         self.challengerID = challengerID
         self.challengedID = challengedID
+        self.challengedEmail = challengedEmail
         self.title = title
         self.description = description
         self.category = category

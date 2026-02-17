@@ -254,6 +254,10 @@ struct HistoryRow: View {
                     Text("vs \(opponent.displayName)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                } else if let email = challenge.challengedEmail {
+                    Text("vs \(email) (invited)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
 

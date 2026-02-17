@@ -8,10 +8,13 @@ struct CreateChallengeView: View {
     @State private var description = ""
     @State private var selectedCategory: ChallengeCategory = ChallengeCategory.allCategories[0]
     @State private var selectedOpponent: User?
+    @State private var inviteEmail: String?
     @State private var showFriendPicker = false
     @State private var opponentSearchText = ""
     @State private var lookupErrorMessage = ""
     @State private var showLookupError = false
+    @State private var showInviteOption = false
+    @State private var showInviteSentAlert = false
 
     var body: some View {
         NavigationStack {
@@ -38,6 +41,29 @@ struct CreateChallengeView: View {
                                 opponentSearchText = ""
                                 lookupErrorMessage = ""
                                 showLookupError = false
+                                showInviteOption = false
+                            }
+                            .font(.subheadline)
+                        }
+                    } else if let email = inviteEmail {
+                        HStack {
+                            Image(systemName: "envelope.fill")
+                                .font(.title2)
+                                .foregroundStyle(.blue)
+                            VStack(alignment: .leading) {
+                                Text(email)
+                                    .font(.subheadline.weight(.semibold))
+                                Text("Not on Battles yet - will receive an invite")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Button("Change") {
+                                inviteEmail = nil
+                                opponentSearchText = ""
+                                lookupErrorMessage = ""
+                                showLookupError = false
+                                showInviteOption = false
                             }
                             .font(.subheadline)
                         }
@@ -71,6 +97,27 @@ struct CreateChallengeView: View {
                                 Text(lookupErrorMessage)
                                     .font(.caption)
                                     .foregroundStyle(.red)
+                            }
+
+                            if showInviteOption {
+                                Button {
+                                    inviteEmail = opponentSearchText.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+                                    showLookupError = false
+                                    showInviteOption = false
+                                } label: {
+                                    HStack {
+                                        Image(systemName: "envelope.badge.person.crop")
+                                            .foregroundStyle(.blue)
+                                        Text("Invite them & create challenge")
+                                            .foregroundStyle(.primary)
+                                        Spacer()
+                                        Image(systemName: "arrow.right.circle.fill")
+                                            .foregroundStyle(.blue)
+                                    }
+                                    .padding(10)
+                                    .background(.blue.opacity(0.1))
+                                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                                }
                             }
                         }
 
@@ -106,7 +153,7 @@ struct CreateChallengeView: View {
                 } header: {
                     Text("Challenge Who?")
                 } footer: {
-                    if selectedOpponent == nil {
+                    if selectedOpponent == nil && inviteEmail == nil {
                         Text("Enter their email address or username to find them, or pick from your friends list.")
                     }
                 }
@@ -143,7 +190,7 @@ struct CreateChallengeView: View {
                 }
 
                 // Preview Section
-                if selectedOpponent != nil && !title.isEmpty {
+                if (selectedOpponent != nil || inviteEmail != nil) && !title.isEmpty {
                     Section {
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
@@ -164,9 +211,19 @@ struct CreateChallengeView: View {
                                 Text("vs")
                                 Image(systemName: "bolt.fill")
                                     .foregroundStyle(.orange)
-                                Text(selectedOpponent?.displayName ?? "")
+                                Text(selectedOpponent?.displayName ?? inviteEmail ?? "")
                             }
                             .font(.subheadline.weight(.semibold))
+
+                            if inviteEmail != nil {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "envelope.fill")
+                                        .font(.caption2)
+                                    Text("An invite email will be sent")
+                                        .font(.caption)
+                                }
+                                .foregroundStyle(.blue)
+                            }
                         }
                         .padding(.vertical, 4)
                     } header: {
@@ -183,21 +240,29 @@ struct CreateChallengeView: View {
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Send") {
+                    Button(inviteEmail != nil ? "Send & Invite" : "Send") {
                         sendChallenge()
                     }
-                    .disabled(selectedOpponent == nil || title.isEmpty)
+                    .disabled((selectedOpponent == nil && inviteEmail == nil) || title.isEmpty)
                     .fontWeight(.semibold)
                 }
             }
             .sheet(isPresented: $showFriendPicker) {
                 FriendPickerView(selectedFriend: $selectedOpponent)
             }
+            .alert("Invitation Sent!", isPresented: $showInviteSentAlert) {
+                Button("OK") {
+                    dismiss()
+                }
+            } message: {
+                Text("We've sent an email to \(inviteEmail ?? "them") inviting them to join Battles. Your challenge will be waiting for them when they create their account!")
+            }
         }
     }
 
     private func lookupOpponent() {
         showLookupError = false
+        showInviteOption = false
         let query = opponentSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
 
         guard !query.isEmpty else { return }
@@ -211,20 +276,35 @@ struct CreateChallengeView: View {
                 showLookupError = false
             }
         } else {
-            lookupErrorMessage = "No user found with \"\(query)\". They need a Battles account first."
-            showLookupError = true
+            if query.contains("@") && query.contains(".") {
+                lookupErrorMessage = "No account found for \"\(query)\"."
+                showLookupError = true
+                showInviteOption = true
+            } else {
+                lookupErrorMessage = "No user found with \"\(query)\". Try their email address to send an invite."
+                showLookupError = true
+            }
         }
     }
 
     private func sendChallenge() {
-        guard let opponent = selectedOpponent else { return }
-        dataManager.createChallenge(
-            challengedID: opponent.id,
-            title: title,
-            description: description,
-            category: selectedCategory.name
-        )
-        dismiss()
+        if let opponent = selectedOpponent {
+            dataManager.createChallenge(
+                challengedID: opponent.id,
+                title: title,
+                description: description,
+                category: selectedCategory.name
+            )
+            dismiss()
+        } else if let email = inviteEmail {
+            dataManager.createChallengeByEmail(
+                challengedEmail: email,
+                title: title,
+                description: description,
+                category: selectedCategory.name
+            )
+            showInviteSentAlert = true
+        }
     }
 }
 

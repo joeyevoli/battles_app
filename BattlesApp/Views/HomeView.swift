@@ -175,6 +175,10 @@ struct ChallengeRow: View {
                     Text("vs \(opponent.displayName)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                } else if let email = challenge.challengedEmail {
+                    Text("vs \(email) (invited)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
 
@@ -236,6 +240,10 @@ struct ChallengeRow: View {
                     Label("Respond", systemImage: "bell.fill")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.orange)
+                } else if challenge.challengedEmail != nil && dataManager.user(for: challenge.challengedID) == nil {
+                    Label("Invited", systemImage: "envelope.fill")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.blue)
                 } else {
                     Label("Sent", systemImage: "paperplane.fill")
                         .font(.caption.weight(.semibold))

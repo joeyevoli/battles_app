@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var dataManager: DataManager
+    @State private var showPendingChallengesAlert = false
 
     var body: some View {
         TabView {
@@ -26,6 +27,19 @@ struct ContentView: View {
                 }
         }
         .tint(.orange)
+        .onAppear {
+            if dataManager.pendingChallengeCountOnSignup > 0 {
+                showPendingChallengesAlert = true
+            }
+        }
+        .alert("You've Been Challenged!", isPresented: $showPendingChallengesAlert) {
+            Button("Let's Go!") {
+                dataManager.pendingChallengeCountOnSignup = 0
+            }
+        } message: {
+            let count = dataManager.pendingChallengeCountOnSignup
+            Text("You have \(count) pending challenge\(count == 1 ? "" : "s") waiting for you! Check your incoming challenges to accept.")
+        }
     }
 }
 
